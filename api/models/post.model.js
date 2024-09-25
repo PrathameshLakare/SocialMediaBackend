@@ -6,6 +6,10 @@ const postSchema = new mongoose.Schema(
     content: String,
     tags: [String],
     likes: Number,
+    author: {
+      name: String,
+      email: String,
+    },
     comments: [
       {
         user: String,
@@ -17,7 +21,7 @@ const postSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const Post = mongoose.model("Post", postSchema);

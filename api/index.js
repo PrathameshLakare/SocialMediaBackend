@@ -55,7 +55,7 @@ app.post("/api/posts/edit/:postId", async (req, res) => {
     const updatedPost = await Post.findByIdAndUpdate(
       req.params.postId,
       req.body,
-      { new: true },
+      { new: true }
     );
     if (updatedPost) {
       res.status(200).json(updatedPost);
@@ -99,7 +99,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
   }
 });
 
-app.delete("/api//user/posts/:postId", async (req, res) => {
+app.delete("/api/user/posts/:postId", async (req, res) => {
   try {
     const deletedPost = await Post.findByIdAndDelete(req.params.id);
 
@@ -149,7 +149,7 @@ app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
     const user = await User.findById(req.body.userId);
     if (user) {
       user.bookmarks = user.bookmarks.filter(
-        (postId) => postId.toString() !== req.params.postId,
+        (postId) => postId.toString() !== req.params.postId
       );
       await user.save();
       res.status(200).json({ message: "Post removed from bookmarks." });
@@ -194,10 +194,10 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
     const followUser = await User.findById(req.params.followUserId);
     if (user && followUser) {
       user.following = user.following.filter(
-        (id) => id.toString() !== followUser._id.toString(),
+        (id) => id.toString() !== followUser._id.toString()
       );
       followUser.followers = followUser.followers.filter(
-        (id) => id.toString() !== user._id.toString(),
+        (id) => id.toString() !== user._id.toString()
       );
       await user.save();
       await followUser.save();
