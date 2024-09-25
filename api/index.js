@@ -99,7 +99,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
   }
 });
 
-app.delete("/api//user/posts/:postId", async (req, res) => {
+app.delete("/api/user/posts/:postId", async (req, res) => {
   try {
     const deletedPost = await Post.findByIdAndDelete(req.params.id);
 
