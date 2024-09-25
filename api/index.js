@@ -3,6 +3,7 @@ const app = express();
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
+const User = require("./models/user.model");
 
 const cors = require("cors");
 app.use(cors());
@@ -113,12 +114,26 @@ app.delete("/api/user/posts/:postId", async (req, res) => {
   }
 });
 
+app.post("/api/users", async (req, res) => {
+  try {
+    const user = new User(req.body);
+    const savedUser = await user.save();
+    if (savedUser) {
+      res
+        .status(201)
+        .json({ message: "User saved successfully.", user: savedUser });
+    }
+  } catch (error) {
+    res.status(500).json("Internal server error.");
+  }
+});
+
 app.post("/api/users/bookmark/:postId", async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
 
     if (user) {
-      user.bookmark.push(req.params.postId);
+      user.bookmarks.push(req.params.postId);
       const saveToBookmark = await user.save();
       res
         .status(200)
