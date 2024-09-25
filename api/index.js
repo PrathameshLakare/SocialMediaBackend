@@ -114,7 +114,7 @@ app.delete("/api/user/posts/:postId", async (req, res) => {
   }
 });
 
-app.post("/api/users", async (req, res) => {
+app.post("/api/user", async (req, res) => {
   try {
     const user = new User(req.body);
     const savedUser = await user.save();
