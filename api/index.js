@@ -128,6 +128,19 @@ app.post("/api/user", async (req, res) => {
   }
 });
 
+app.get("/api/user", async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    if (users.length > 0) {
+      res.json({ users: users });
+    } else {
+      res.status(404).json({ error: "Failed to find users." });
+    }
+  } catch (error) {
+    res.status(500).json("Internal server error.");
+  }
+});
+
 app.post("/api/users/bookmark/:postId", async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
