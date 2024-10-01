@@ -74,7 +74,7 @@ app.post("/api/posts/like/:postId", async (req, res) => {
 
     if (post) {
       post.likes = post.likes + 1;
-      const updatedPost = await Post.save();
+      const updatedPost = await post.save();
       res.status(200).json(updatedPost);
     } else {
       res.status(404).json("Post not found.");
@@ -90,7 +90,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
 
     if (post && post.likes > 0) {
       post.likes = post.likes - 1;
-      const updatedPost = await Post.save();
+      const updatedPost = await post.save();
       res.status(200).json(updatedPost);
     } else {
       res.status(404).json("Post not found.");
@@ -102,7 +102,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
 
 app.delete("/api/user/posts/:postId", async (req, res) => {
   try {
-    const deletedPost = await Post.findByIdAndDelete(req.params.id);
+    const deletedPost = await Post.findByIdAndDelete(req.params.postId);
 
     if (deletedPost) {
       res.status(200).json({ message: "Post deleted successfully." });
