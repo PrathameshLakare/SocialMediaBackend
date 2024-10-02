@@ -141,6 +141,19 @@ app.get("/api/user", async (req, res) => {
   }
 });
 
+app.get("/api/user/update/:userId", async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.userId, req.body, {
+      new: true,
+    });
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+  } catch (error) {
+    res.status(500).json("Internal server error.");
+  }
+});
+
 app.post("/api/users/bookmark/:postId", async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
@@ -184,15 +197,6 @@ app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
     } else {
       res.status(404).json({ error: "User not found." });
     }
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-app.get("/api/users", async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
   }
