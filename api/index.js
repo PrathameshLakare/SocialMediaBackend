@@ -132,7 +132,7 @@ app.get("/api/user", async (req, res) => {
   try {
     const users = await User.find().select("-password");
     if (users.length > 0) {
-      res.json({ users: users });
+      res.json(users);
     } else {
       res.status(404).json({ error: "Failed to find users." });
     }
