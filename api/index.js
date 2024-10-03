@@ -74,7 +74,7 @@ app.post("/api/posts/like/:postId", async (req, res) => {
 
     if (post) {
       post.likes = post.likes + 1;
-      const updatedPost = await Post.save();
+      const updatedPost = await post.save();
       res.status(200).json(updatedPost);
     } else {
       res.status(404).json("Post not found.");
@@ -90,7 +90,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
 
     if (post && post.likes > 0) {
       post.likes = post.likes - 1;
-      const updatedPost = await Post.save();
+      const updatedPost = await post.save();
       res.status(200).json(updatedPost);
     } else {
       res.status(404).json("Post not found.");
@@ -148,6 +148,8 @@ app.get("/api/user/update/:userId", async (req, res) => {
     });
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found." });
+    } else {
+      res.status(200).json(updatedUser);
     }
   } catch (error) {
     res.status(500).json("Internal server error.");
