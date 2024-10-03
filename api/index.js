@@ -141,11 +141,15 @@ app.get("/api/user", async (req, res) => {
   }
 });
 
-app.get("/api/user/update/:userId", async (req, res) => {
+app.post("/api/user/update/:userId", async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.userId, req.body, {
-      new: true,
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      req.body,
+      {
+        new: true,
+      }
+    );
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found." });
     } else {
@@ -210,9 +214,7 @@ app.post("/api/users/follow/:followUserId", async (req, res) => {
     const followUser = await User.findById(req.params.followUserId);
     if (user && followUser) {
       user.following.push(followUser._id);
-      followUser.followers.push(user._id);
       await user.save();
-      await followUser.save();
       res.status(200).json({ message: "User followed successfully." });
     } else {
       res.status(404).json({ error: "User not found." });
@@ -230,11 +232,7 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
       user.following = user.following.filter(
         (id) => id.toString() !== followUser._id.toString()
       );
-      followUser.followers = followUser.followers.filter(
-        (id) => id.toString() !== user._id.toString()
-      );
       await user.save();
-      await followUser.save();
       res.status(200).json({ message: "User unfollowed successfully." });
     } else {
       res.status(404).json({ error: "User not found." });
