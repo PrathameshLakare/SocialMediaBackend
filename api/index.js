@@ -213,9 +213,14 @@ app.post("/api/users/follow/:followUserId", async (req, res) => {
     const user = await User.findById(req.body.userId);
     const followUser = await User.findById(req.params.followUserId);
     if (user && followUser) {
-      user.following.push(followUser._id);
-      await user.save();
-      res.status(200).json({ message: "User followed successfully." });
+      if (!user.following.includes(followUser._id)) {
+        user.following.push(followUser._id);
+        await user.save();
+      }
+      const updatedUser = await User.findById(req.body.userId).populate(
+        "following"
+      ); 
+      res.status(200).json({ message: "User followed successfully.", user: updatedUser });
     } else {
       res.status(404).json({ error: "User not found." });
     }
@@ -233,7 +238,11 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
         (id) => id.toString() !== followUser._id.toString()
       );
       await user.save();
-      res.status(200).json({ message: "User unfollowed successfully." });
+
+      const updatedUser = await User.findById(req.body.userId).populate(
+        "following"
+      ); // Fetch the updated user with the following field populated
+      res.status(200).json({ message: "User unfollowed successfully.", user: updatedUser });
     } else {
       res.status(404).json({ error: "User not found." });
     }
