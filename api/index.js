@@ -178,11 +178,26 @@ app.post("/api/users/bookmark/:postId", async (req, res) => {
   }
 });
 
-app.get("/api/users/bookmark", async (req, res) => {
+app.get("/api/users/bookmark/:userId", async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId).populate("bookmarks");
+    const user = await User.findById(req.params.userId);
     if (user) {
       res.json(user.bookmarks);
+    } else {
+      res.status(404).json({ error: "User not found." });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+app.post("/api/users/add-bookmark/:postId", async (req, res) => {
+  try {
+    const user = await User.findById(req.body.userId);
+    if (user && !user.bookmarks.includes(req.params.postId)) {
+      user.bookmarks.push(req.params.postId);
+      await user.save();
+      res.status(200).json({ user });
     } else {
       res.status(404).json({ error: "User not found." });
     }
@@ -199,7 +214,7 @@ app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
         (postId) => postId.toString() !== req.params.postId
       );
       await user.save();
-      res.status(200).json({ message: "Post removed from bookmarks." });
+      res.status(200).json({ user });
     } else {
       res.status(404).json({ error: "User not found." });
     }
@@ -215,7 +230,7 @@ app.post("/api/users/follow/:followUserId", async (req, res) => {
     if (user && followUser) {
       user.following.push(followUser._id);
       await user.save();
-      res.status(200).json({ message: "User followed successfully." });
+      res.status(200).json({ user });
     } else {
       res.status(404).json({ error: "User not found." });
     }
@@ -233,7 +248,7 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
         (id) => id.toString() !== followUser._id.toString()
       );
       await user.save();
-      res.status(200).json({ message: "User unfollowed successfully." });
+      res.status(200).json({ user });
     } else {
       res.status(404).json({ error: "User not found." });
     }
