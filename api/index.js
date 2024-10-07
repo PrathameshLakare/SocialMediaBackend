@@ -178,9 +178,9 @@ app.post("/api/users/bookmark/:postId", async (req, res) => {
   }
 });
 
-app.get("/api/users/bookmark", async (req, res) => {
+app.get("/api/users/bookmark/:userId", async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId).populate("bookmarks");
+    const user = await User.findById(req.params.userId);
     if (user) {
       res.json(user.bookmarks);
     } else {
