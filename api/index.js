@@ -45,16 +45,16 @@ app.get("/api/post", async (req, res) => {
   }
 });
 
-app.post("/api/user/post", upload.array("media", 3), async (req, res) => {
+app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
     const { title, content, author } = req.body;
-    const mediaFiles = req.files || [];
-    const mediaUrls = mediaFiles.map((file) => file.path);
+    const mediaFile = req.file;
+    const mediaUrl = mediaFile ? mediaFile.path : null; // If a file is uploaded, get its path
 
     const post = new Post({
       title,
       content,
-      media: mediaUrls,
+      media: mediaUrl ? [mediaUrl] : [],
       author,
       likes: 0,
     });
