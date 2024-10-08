@@ -4,11 +4,7 @@ const postSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     content: { type: String, required: true },
-    media: [
-      {
-        type: String,
-      },
-    ],
+    media: { type: string },
     likes: Number,
     author: {
       type: mongoose.Schema.Types.ObjectId,
