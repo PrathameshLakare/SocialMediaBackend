@@ -1,10 +1,9 @@
-import express from "express";
-import { v2 as cloudinary } from "cloudinary";
-import multer from "multer";
-import multerStorageCloudinary from "multer-storage-cloudinary";
-
 const express = require("express");
 const app = express();
+
+const { v2: cloudinary } = require("cloudinary");
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
@@ -22,9 +21,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new multerStorageCloudinary({
+const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
+    folder: "uploads",
+    allowed_formats: ["jpg", "png", "mp4", "avi"],
     resource_type: "auto",
   },
 });
@@ -47,9 +48,8 @@ app.get("/api/post", async (req, res) => {
 app.post("/api/user/post", upload.array("media", 3), async (req, res) => {
   try {
     const { title, content, author } = req.body;
-    const mediaFiles = req.files;
-
-    const mediaUrls = mediaFiles.map((file) => file.secure_url);
+    const mediaFiles = req.files || [];
+    const mediaUrls = mediaFiles.map((file) => file.path);
 
     const post = new Post({
       title,
