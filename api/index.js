@@ -1,3 +1,8 @@
+import express from "express";
+import { v2 as cloudinary } from "cloudinary";
+import multer from "multer";
+import multerStorageCloudinary from "multer-storage-cloudinary";
+
 const express = require("express");
 const app = express();
 
@@ -10,6 +15,21 @@ app.use(cors());
 
 app.use(express.json());
 initializeDatabase();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new multerStorageCloudinary({
+  cloudinary: cloudinary,
+  params: {
+    resource_type: "auto",
+  },
+});
+
+const upload = multer({ storage });
 
 app.get("/api/post", async (req, res) => {
   try {
@@ -24,17 +44,29 @@ app.get("/api/post", async (req, res) => {
   }
 });
 
-app.post("/api/user/post", async (req, res) => {
+app.post("/api/user/post", upload.array("media", 3), async (req, res) => {
   try {
-    const post = new Post(req.body);
+    const { title, content, author } = req.body;
+    const mediaFiles = req.files;
+
+    const mediaUrls = mediaFiles.map((file) => file.secure_url);
+
+    const post = new Post({
+      title,
+      content,
+      media: mediaUrls,
+      author,
+      likes: 0,
+    });
+
     const savedPost = await post.save();
-    if (savedPost) {
-      res
-        .status(201)
-        .json({ message: "Post saved successfully.", post: savedPost });
-    }
+
+    res.status(201).json({
+      message: "Post created successfully",
+      post: savedPost,
+    });
   } catch (error) {
-    res.status(500).json({ error: "Internal server error." });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
