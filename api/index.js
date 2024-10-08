@@ -1,9 +1,9 @@
 const express = require("express");
 const app = express();
 
-const { v2: cloudinary } = require("cloudinary");
+const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const fs = require("fs");
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
@@ -21,12 +21,27 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "/uploads",
-    allowed_formats: ["jpg", "png", "mp4", "avi"],
-    resource_type: "auto",
+const uploadOnCloudinary = async (filePath) => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      resource_type: "auto",
+    });
+    fs.unlinkSync(filePath);
+    return result.url;
+  } catch (error) {
+    console.error("Error uploading to Cloudinary:", error);
+    fs.unlinkSync(filePath);
+    throw error;
+  }
+};
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./public/temp");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + "-" + uniqueSuffix);
   },
 });
 
@@ -48,8 +63,12 @@ app.get("/api/post", async (req, res) => {
 app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
     const { title, content, author } = req.body;
-    const mediaFile = req.file;
-    const mediaUrl = mediaFile ? mediaFile.path : null; // If a file is uploaded, get its path
+    const mediaFilePath = req.file.path;
+
+    let mediaUrl = null;
+    if (mediaFilePath) {
+      mediaUrl = await uploadOnCloudinary(mediaFilePath);
+    }
 
     const post = new Post({
       title,
