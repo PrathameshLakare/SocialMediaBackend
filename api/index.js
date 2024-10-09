@@ -263,7 +263,7 @@ app.post("/api/users/add-bookmark/:postId", async (req, res) => {
     if (user && !user.bookmarks.includes(req.params.postId)) {
       user.bookmarks.push(req.params.postId);
       await user.save();
-      res.status(200).json({ user });
+      res.status(200).json(user.bookmarks);
     } else {
       res.status(404).json({ error: "User not found." });
     }
@@ -280,7 +280,7 @@ app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
         (postId) => postId.toString() !== req.params.postId
       );
       await user.save();
-      res.status(200).json({ user });
+      res.status(200).json(user.bookmarks);
     } else {
       res.status(404).json({ error: "User not found." });
     }
