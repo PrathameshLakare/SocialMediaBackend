@@ -146,7 +146,7 @@ app.post("/api/posts/like/:postId", async (req, res) => {
     if (!post.likes.includes(user._id)) {
       post.likes.push(user._id);
       const updatedPost = await post.save();
-      return res.status(200).json(updatedPost.likes);
+      return res.status(200).json(updatedPost);
     } else {
       return res.status(400).json("User has already liked this post.");
     }
@@ -169,7 +169,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
         (id) => id.toString() !== user._id.toString()
       );
       const updatedPost = await post.save();
-      return res.status(200).json(updatedPost.likes);
+      return res.status(200).json(updatedPost);
     } else {
       return res.status(400).json("User has not liked this post.");
     }
