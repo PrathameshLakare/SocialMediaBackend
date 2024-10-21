@@ -136,14 +136,19 @@ app.post("/api/posts/edit/:postId", async (req, res) => {
 
 app.post("/api/posts/like/:postId", async (req, res) => {
   try {
+    const user = await User.findById(req.body.userId);
     const post = await Post.findById(req.params.postId);
 
-    if (post) {
-      post.likes = post.likes + 1;
+    if (!post || !user) {
+      return res.status(404).json("Post or user not found.");
+    }
+
+    if (!post.likes.includes(user._id)) {
+      post.likes.push(user._id);
       const updatedPost = await post.save();
-      res.status(200).json(updatedPost);
+      return res.status(200).json(updatedPost);
     } else {
-      res.status(404).json("Post not found.");
+      return res.status(400).json("User has already liked this post.");
     }
   } catch (error) {
     res.status(500).json("Internal server error.");
@@ -152,14 +157,21 @@ app.post("/api/posts/like/:postId", async (req, res) => {
 
 app.post("/api/posts/dislike/:postId", async (req, res) => {
   try {
+    const user = await User.findById(req.body.userId);
     const post = await Post.findById(req.params.postId);
 
-    if (post && post.likes > 0) {
-      post.likes = post.likes - 1;
+    if (!post || !user) {
+      return res.status(404).json("Post or user not found.");
+    }
+
+    if (post.likes.includes(user._id)) {
+      post.likes = post.likes.filter(
+        (id) => id.toString() !== user._id.toString()
+      );
       const updatedPost = await post.save();
-      res.status(200).json(updatedPost);
+      return res.status(200).json(updatedPost);
     } else {
-      res.status(404).json("Post not found.");
+      return res.status(400).json("User has not liked this post.");
     }
   } catch (error) {
     res.status(500).json("Internal server error.");
