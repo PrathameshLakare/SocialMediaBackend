@@ -151,7 +151,8 @@ app.post("/api/posts/like/:postId", async (req, res) => {
       return res.status(400).json("User has already liked this post.");
     }
   } catch (error) {
-    res.status(500).json("Internal server error.", error);
+    console.error("Error while liking post:", error);
+    res.status(500).json("Internal server error.");
   }
 });
 
@@ -174,6 +175,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
       return res.status(400).json("User has not liked this post.");
     }
   } catch (error) {
+    console.error("Error while disliking post:", error);
     res.status(500).json("Internal server error.");
   }
 });
