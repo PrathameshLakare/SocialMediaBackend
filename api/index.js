@@ -49,7 +49,7 @@ const upload = multer({ storage });
 
 app.get("/api/post", async (req, res) => {
   try {
-    const posts = await Post.find().populate("author");
+    const posts = await Post.find().populate("author", "-password");
     if (posts) {
       res.json(posts);
     } else {
