@@ -151,7 +151,7 @@ app.post("/api/posts/like/:postId", async (req, res) => {
       return res.status(400).json("User has already liked this post.");
     }
   } catch (error) {
-    res.status(500).json("Internal server error.");
+    res.status(500).json("Internal server error.", error);
   }
 });
 
