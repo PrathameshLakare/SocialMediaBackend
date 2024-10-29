@@ -3,12 +3,14 @@ const app = express();
 require("dotenv").config();
 
 const cloudinary = require("cloudinary").v2;
+
 const multer = require("multer");
 const fs = require("fs");
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
 const User = require("./models/user.model");
+const fileUpload = require("express-fileupload");
 
 const cors = require("cors");
 app.use(cors());
@@ -16,28 +18,43 @@ app.use(cors());
 app.use(express.json());
 initializeDatabase();
 
+app.use(
+  fileUpload({
+    useTempFiles: true,
+  })
+);
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = "./public/temp";
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const fileExtension = path.extname(file.originalname); // Extract original extension
-    cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     const dir = "./public/temp";
+//     if (!fs.existsSync(dir)) {
+//       fs.mkdirSync(dir, { recursive: true });
+//     }
+//     cb(null, dir);
+//   },
+//   filename: function (req, file, cb) {
+//     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+//     const fileExtension = path.extname(file.originalname); // Extract original extension
+//     cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
+//   },
+// });
 
-const upload = multer({ storage });
+// const upload = multer({ storage });
+
+// const storage = new CloudinaryStorage({
+//   cloudinary: cloudinary,
+//   params: {
+//     allowed_formats: ["jpg", "png", "jpeg"],
+//     resource_type: "image",
+//   },
+// });
+// const upload = multer({ storage });
 
 app.get("/api/post", async (req, res) => {
   try {
@@ -52,27 +69,65 @@ app.get("/api/post", async (req, res) => {
   }
 });
 
-app.post("/api/user/post", upload.single("media"), async (req, res) => {
+// app.post("/api/user/post", async (req, res) => {
+//   try {
+//     const file = req.files.photo;
+//     const { title, content, author } = req.body;
+//     if (!title || !content || !author) {
+//       return res
+//         .status(400)
+//         .json({ error: "Title, content, and author are required." });
+//     }
+
+//     let mediaUrl = null;
+//     if (file) {
+//       const result = await cloudinary.uploader.upload(file.tempFilePath, {
+//         resource_type: "auto",
+//       });
+//       mediaUrl = result.secure_url;
+//       console.log(result);
+
+//       try {
+//         fs.unlinkSync(req.file.path);
+//       } catch (err) {
+//         console.error("Error deleting local file:", err);
+//       }
+//     }
+
+//     const post = new Post({
+//       title,
+//       content,
+//       media: mediaUrl,
+//       author,
+//     });
+
+//     const savedPost = await post.save();
+//     res
+//       .status(201)
+//       .json({ message: "Post saved successfully.", post: savedPost });
+//   } catch (error) {
+//     console.error("Error creating post:", error);
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// });
+
+app.post("/api/user/post", async (req, res) => {
   try {
+    const file = req.files.media;
+
+    let mediaUrl = null;
+    if (file) {
+      const result = await cloudinary.uploader.upload(file.tempFilePath, {
+        resource_type: "auto",
+      });
+      mediaUrl = result.secure_url;
+    }
+
     const { title, content, author } = req.body;
     if (!title || !content || !author) {
       return res
         .status(400)
         .json({ error: "Title, content, and author are required." });
-    }
-
-    let mediaUrl = null;
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "auto",
-      });
-      mediaUrl = result.secure_url;
-
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error("Error deleting local file:", err);
-      }
     }
 
     const post = new Post({
