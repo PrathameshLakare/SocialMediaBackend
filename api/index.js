@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+require("dotenv").config();
 
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
@@ -21,19 +22,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (filePath) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      resource_type: "auto",
-    });
-    fs.unlinkSync(filePath);
-    return result.url;
-  } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    fs.unlinkSync(filePath);
-    throw error;
-  }
-};
+// const uploadOnCloudinary = async (filePath) => {
+//   try {
+//     const result = await cloudinary.uploader.upload(filePath, {
+//       resource_type: "auto",
+//     });
+//     fs.unlinkSync(filePath);
+//     return result.url;
+//   } catch (error) {
+//     console.error("Error uploading to Cloudinary:", error);
+//     fs.unlinkSync(filePath);
+//     throw error;
+//   }
+// };
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -46,6 +47,18 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+app.post("/upload", upload.single("image"), async (req, res) => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      resource_type: "auto",
+    });
+    fs.unlinkSync(filePath);
+    res.json({ url: result.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get("/api/post", async (req, res) => {
   try {
