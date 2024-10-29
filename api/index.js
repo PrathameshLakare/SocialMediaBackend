@@ -24,33 +24,20 @@ cloudinary.config({
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "./public/temp");
+    const dir = "./public/temp";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix);
+    const fileExtension = path.extname(file.originalname); // Extract original extension
+    cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
   },
 });
 
 const upload = multer({ storage });
-
-app.post("/upload", upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto",
-    });
-
-    fs.unlinkSync(req.file.path);
-    res.json({ secure_url: result.secure_url });
-  } catch (err) {
-    console.error("Error uploading file:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 app.get("/api/post", async (req, res) => {
   try {
@@ -67,20 +54,32 @@ app.get("/api/post", async (req, res) => {
 
 app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
+    const { title, content, author } = req.body;
+    if (!title || !content || !author) {
+      return res
+        .status(400)
+        .json({ error: "Title, content, and author are required." });
+    }
+
     let mediaUrl = null;
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         resource_type: "auto",
       });
       mediaUrl = result.secure_url;
-      fs.unlinkSync(req.file.path);
+
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error("Error deleting local file:", err);
+      }
     }
 
     const post = new Post({
-      title: req.body.title,
-      content: req.body.content,
+      title,
+      content,
       media: mediaUrl,
-      author: req.body.author,
+      author,
     });
 
     const savedPost = await post.save();
