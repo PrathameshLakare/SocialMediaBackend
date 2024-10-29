@@ -22,20 +22,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// const uploadOnCloudinary = async (filePath) => {
-//   try {
-//     const result = await cloudinary.uploader.upload(filePath, {
-//       resource_type: "auto",
-//     });
-//     fs.unlinkSync(filePath);
-//     return result.url;
-//   } catch (error) {
-//     console.error("Error uploading to Cloudinary:", error);
-//     fs.unlinkSync(filePath);
-//     throw error;
-//   }
-// };
-
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "./public/temp");
@@ -48,14 +34,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-app.post("/upload", upload.single("image"), async (req, res) => {
+app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    const result = await cloudinary.uploader.upload(filePath, {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
       resource_type: "auto",
     });
-    fs.unlinkSync(filePath);
-    res.json({ url: result.url });
+
+    fs.unlinkSync(req.file.path);
+    res.json({ secure_url: result.secure_url });
   } catch (err) {
+    console.error("Error uploading file:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -73,49 +65,33 @@ app.get("/api/post", async (req, res) => {
   }
 });
 
-app.post("/api/user/post", async (req, res) => {
+app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
-    const post = new Post(req.body);
-    const savedPost = await post.save();
-    if (savedPost) {
-      res
-        .status(201)
-        .json({ message: "Post saved successfully.", post: savedPost });
+    let mediaUrl = null;
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "auto",
+      });
+      mediaUrl = result.secure_url;
+      fs.unlinkSync(req.file.path);
     }
+
+    const post = new Post({
+      title: req.body.title,
+      content: req.body.content,
+      media: mediaUrl,
+      author: req.body.author,
+    });
+
+    const savedPost = await post.save();
+    res
+      .status(201)
+      .json({ message: "Post saved successfully.", post: savedPost });
   } catch (error) {
+    console.error("Error creating post:", error);
     res.status(500).json({ error: "Internal server error." });
   }
 });
-
-// for cludinary not working
-// app.post("/api/user/post", upload.single("media"), async (req, res) => {
-//   try {
-//     const { title, content, author } = req.body;
-//     const mediaFilePath = req.file.path;
-
-//     let mediaUrl = null;
-//     if (mediaFilePath) {
-//       mediaUrl = await uploadOnCloudinary(mediaFilePath);
-//     }
-
-//     const post = new Post({
-//       title,
-//       content,
-//       media: mediaUrl ? [mediaUrl] : [],
-//       author,
-//       likes: 0,
-//     });
-
-//     const savedPost = await post.save();
-
-//     res.status(201).json({
-//       message: "Post created successfully",
-//       post: savedPost,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
 
 app.get("/api/post/:postId", async (req, res) => {
   try {
