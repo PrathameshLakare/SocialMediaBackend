@@ -1,28 +1,17 @@
 const express = require("express");
 const app = express();
 require("dotenv").config();
-
 const cloudinary = require("cloudinary").v2;
-
 const multer = require("multer");
 const fs = require("fs");
-
+const path = require("path");
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
-const User = require("./models/user.model");
-const fileUpload = require("express-fileupload");
-
 const cors = require("cors");
-app.use(cors());
 
+app.use(cors());
 app.use(express.json());
 initializeDatabase();
-
-app.use(
-  fileUpload({
-    useTempFiles: true,
-  })
-);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -44,8 +33,45 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
   },
 });
-
 const upload = multer({ storage });
+
+app.post("/api/user/post", upload.single("media"), async (req, res) => {
+  try {
+    const file = req.file;
+    const { title, content, author } = req.body;
+
+    if (!title || !content || !author) {
+      return res
+        .status(400)
+        .json({ error: "Title, content, and author are required." });
+    }
+
+    let mediaUrl = null;
+    if (file) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: "auto",
+      });
+      mediaUrl = result.secure_url;
+
+      fs.unlinkSync(file.path);
+    }
+
+    const post = new Post({
+      title,
+      content,
+      media: mediaUrl,
+      author,
+    });
+
+    const savedPost = await post.save();
+    res
+      .status(201)
+      .json({ message: "Post saved successfully.", post: savedPost });
+  } catch (error) {
+    console.error("Error creating post:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
 
 app.get("/api/post", async (req, res) => {
   try {
@@ -56,135 +82,6 @@ app.get("/api/post", async (req, res) => {
       res.status(404).json({ error: "Failed to find post." });
     }
   } catch (error) {
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-// app.post("/api/user/post", async (req, res) => {
-//   try {
-//     const file = req.files.photo;
-//     const { title, content, author } = req.body;
-//     if (!title || !content || !author) {
-//       return res
-//         .status(400)
-//         .json({ error: "Title, content, and author are required." });
-//     }
-
-//     let mediaUrl = null;
-//     if (file) {
-//       const result = await cloudinary.uploader.upload(file.tempFilePath, {
-//         resource_type: "auto",
-//       });
-//       mediaUrl = result.secure_url;
-//       console.log(result);
-
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (err) {
-//         console.error("Error deleting local file:", err);
-//       }
-//     }
-
-//     const post = new Post({
-//       title,
-//       content,
-//       media: mediaUrl,
-//       author,
-//     });
-
-//     const savedPost = await post.save();
-//     res
-//       .status(201)
-//       .json({ message: "Post saved successfully.", post: savedPost });
-//   } catch (error) {
-//     console.error("Error creating post:", error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
-
-app.post("/api/user/post", upload.single("media"), async (req, res) => {
-  try {
-    const file = req.files.media;
-
-    let mediaUrl = null;
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.tempFilePath, {
-        resource_type: "auto",
-      });
-      mediaUrl = result.secure_url;
-    }
-
-    const { title, content, author } = req.body;
-    if (!title || !content || !author) {
-      return res
-        .status(400)
-        .json({ error: "Title, content, and author are required." });
-    }
-
-    const post = new Post({
-      title,
-      content,
-      media: mediaUrl,
-      author,
-    });
-
-    const savedPost = await post.save();
-    res
-      .status(201)
-      .json({ message: "Post saved successfully.", post: savedPost });
-  } catch (error) {
-    console.error("Error creating post:", error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-});
-
-//working
-
-// app.get("/api/post/:postId", async (req, res) => {
-//   try {
-//     const post = await Post.findById(req.params.postId);
-//     if (post) {
-//       res.json(post);
-//     } else {
-//       res.status(404).json({ error: "Post not found" });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
-
-app.post("/api/user/post", upload.single("media"), async (req, res) => {
-  try {
-    const file = req.file;
-
-    let mediaUrl = null;
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        resource_type: "auto",
-      });
-      mediaUrl = result.secure_url;
-    }
-
-    const { title, content, author } = req.body;
-    if (!title || !content || !author) {
-      return res
-        .status(400)
-        .json({ error: "Title, content, and author are required." });
-    }
-
-    const post = new Post({
-      title,
-      content,
-      media: mediaUrl,
-      author,
-    });
-
-    const savedPost = await post.save();
-    res
-      .status(201)
-      .json({ message: "Post saved successfully.", post: savedPost });
-  } catch (error) {
-    console.error("Error creating post:", error);
     res.status(500).json({ error: "Internal server error." });
   }
 });
@@ -409,7 +306,7 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
   }
 });
 
-const port = 3000;
+const port = 3001;
 app.listen(port, () => {
   console.log(`Server is listening on ${port}`);
 });
