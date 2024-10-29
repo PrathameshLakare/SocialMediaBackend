@@ -1,23 +1,36 @@
 const express = require("express");
 const app = express();
 require("dotenv").config();
+
 const cloudinary = require("cloudinary").v2;
+
 const multer = require("multer");
 const fs = require("fs");
-const path = require("path");
+
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
-const cors = require("cors");
+const User = require("./models/user.model");
+const fileUpload = require("express-fileupload");
 
+const cors = require("cors");
 app.use(cors());
+
 app.use(express.json());
 initializeDatabase();
+
+app.use(
+  fileUpload({
+    useTempFiles: true,
+  })
+);
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+//temp store files
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -33,7 +46,21 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
   },
 });
+
 const upload = multer({ storage });
+
+app.get("/api/post", async (req, res) => {
+  try {
+    const posts = await Post.find().populate("author", "-password");
+    if (posts) {
+      res.json(posts);
+    } else {
+      res.status(404).json({ error: "Failed to find post." });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
 
 app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
@@ -46,6 +73,7 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
         .json({ error: "Title, content, and author are required." });
     }
 
+    // Upload file to Cloudinary if provided
     let mediaUrl = null;
     if (file) {
       const result = await cloudinary.uploader.upload(file.path, {
@@ -53,9 +81,11 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
       });
       mediaUrl = result.secure_url;
 
+      // Clean up temporary file
       fs.unlinkSync(file.path);
     }
 
+    // Create new post
     const post = new Post({
       title,
       content,
@@ -73,13 +103,13 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
   }
 });
 
-app.get("/api/post", async (req, res) => {
+app.get("/api/post/:postId", async (req, res) => {
   try {
-    const posts = await Post.find().populate("author", "-password");
-    if (posts) {
-      res.json(posts);
+    const post = await Post.findById(req.params.postId);
+    if (post) {
+      res.json(post);
     } else {
-      res.status(404).json({ error: "Failed to find post." });
+      res.status(404).json({ error: "Post not found" });
     }
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
