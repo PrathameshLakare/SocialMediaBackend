@@ -6,11 +6,11 @@ const cloudinary = require("cloudinary").v2;
 
 const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
 const User = require("./models/user.model");
-const fileUpload = require("express-fileupload");
 
 const cors = require("cors");
 app.use(cors());
@@ -18,19 +18,11 @@ app.use(cors());
 app.use(express.json());
 initializeDatabase();
 
-app.use(
-  fileUpload({
-    useTempFiles: true,
-  })
-);
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-//temp store files
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -64,7 +56,6 @@ app.get("/api/post", async (req, res) => {
 
 app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
-    const file = req.file;
     const { title, content, author } = req.body;
 
     if (!title || !content || !author) {
@@ -73,26 +64,19 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
         .json({ error: "Title, content, and author are required." });
     }
 
-    // Upload file to Cloudinary if provided
     let mediaUrl = null;
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        resource_type: "auto",
-      });
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
       mediaUrl = result.secure_url;
 
-      // Clean up temporary file
-      fs.unlinkSync(file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error("Error deleting local file:", err);
+      }
     }
 
-    // Create new post
-    const post = new Post({
-      title,
-      content,
-      media: mediaUrl,
-      author,
-    });
-
+    const post = new Post({ title, content, media: mediaUrl, author });
     const savedPost = await post.save();
     res
       .status(201)
@@ -336,7 +320,7 @@ app.post("/api/users/unfollow/:followUserId", async (req, res) => {
   }
 });
 
-const port = 3000;
+const port = 3001;
 app.listen(port, () => {
   console.log(`Server is listening on ${port}`);
 });
