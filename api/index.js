@@ -25,21 +25,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     const dir = "./public/temp";
-//     if (!fs.existsSync(dir)) {
-//       fs.mkdirSync(dir, { recursive: true });
-//     }
-//     cb(null, dir);
-//   },
-//   filename: function (req, file, cb) {
-//     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-//     const fileExtension = path.extname(file.originalname);
-//     cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
-//   },
-// });
-
 const storage = multer.memoryStorage();
 
 const upload = multer({ storage });
@@ -56,39 +41,6 @@ app.get("/api/post", async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-
-// app.post("/api/user/post", upload.single("media"), async (req, res) => {
-//   try {
-//     const { title, content, author } = req.body;
-
-//     if (!title || !content || !author) {
-//       return res
-//         .status(400)
-//         .json({ error: "Title, content, and author are required." });
-//     }
-
-//     let mediaUrl = null;
-//     if (req.file) {
-//       const result = await cloudinary.uploader.upload(req.file.path);
-//       mediaUrl = result.secure_url;
-
-//       try {
-//         fs.unlinkSync(req.file.path);
-//       } catch (err) {
-//         console.error("Error deleting local file:", err);
-//       }
-//     }
-
-//     const post = new Post({ title, content, media: mediaUrl, author });
-//     const savedPost = await post.save();
-//     res
-//       .status(201)
-//       .json({ message: "Post saved successfully.", post: savedPost });
-//   } catch (error) {
-//     console.error("Error creating post:", error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
 
 app.post("/api/user/post", upload.single("media"), async (req, res) => {
   try {
@@ -143,6 +95,7 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
+
 app.get("/api/post/:postId", async (req, res) => {
   try {
     const post = await Post.findById(req.params.postId);
@@ -156,22 +109,91 @@ app.get("/api/post/:postId", async (req, res) => {
   }
 });
 
-app.post("/api/posts/edit/:postId", async (req, res) => {
-  try {
-    const updatedPost = await Post.findByIdAndUpdate(
-      req.params.postId,
-      req.body,
-      { new: true }
-    );
-    if (updatedPost) {
-      res.status(200).json(updatedPost);
-    } else {
-      res.status(404).json("Post not found");
+// app.post("/api/posts/edit/:postId", async (req, res) => {
+//   try {
+//     const updatedPost = await Post.findByIdAndUpdate(
+//       req.params.postId,
+//       req.body,
+//       { new: true }
+//     );
+//     if (updatedPost) {
+//       res.status(200).json(updatedPost);
+//     } else {
+//       res.status(404).json("Post not found");
+//     }
+//   } catch (error) {
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// });
+
+app.post(
+  "/api/posts/edit/:postId",
+  upload.single("media"),
+  async (req, res) => {
+    try {
+      const { title, content, author } = req.body;
+
+      if (!title || !content || !author) {
+        return res
+          .status(400)
+          .json({ error: "Title, content, and author are required." });
+      }
+
+      let mediaUrl = null;
+      if (req.file) {
+        try {
+          const uploadFromBuffer = (req) => {
+            return new Promise((resolve, reject) => {
+              const cld_upload_stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: "foo",
+                },
+                (error, result) => {
+                  if (result) {
+                    resolve(result);
+                  } else {
+                    reject(error);
+                  }
+                }
+              );
+
+              streamifier
+                .createReadStream(req.file.buffer)
+                .pipe(cld_upload_stream);
+            });
+          };
+          const result = await uploadFromBuffer(req);
+          mediaUrl = result.secure_url;
+        } catch (error) {
+          console.error("Error uploading media to cloudinary:", error);
+          return res.status(500).json({ error: "Internal server error." });
+        }
+      }
+
+      const updateData = { title, content, author };
+      if (mediaUrl) {
+        updateData.media = mediaUrl;
+      }
+
+      const updatedPost = await Post.findByIdAndUpdate(
+        req.params.postId,
+        updateData,
+        { new: true }
+      );
+
+      if (updatedPost) {
+        res
+          .status(200)
+          .json({ message: "Post updated successfully.", post: updatedPost });
+      } else {
+        res.status(404).json({ error: "Post not found" });
+      }
+    } catch (error) {
+      console.error("Error updating post:", error);
+      res.status(500).json({ error: "Internal server error." });
     }
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error." });
   }
-});
+);
 
 app.post("/api/posts/like/:postId", async (req, res) => {
   try {
