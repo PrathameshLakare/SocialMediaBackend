@@ -6,8 +6,6 @@ const cloudinary = require("cloudinary").v2;
 let streamifier = require("streamifier");
 
 const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
