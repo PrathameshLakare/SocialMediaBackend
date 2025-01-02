@@ -1,11 +1,9 @@
 const express = require("express");
 const app = express();
-require("dotenv").config();
-
-const cloudinary = require("cloudinary").v2;
-let streamifier = require("streamifier");
-
+const cloudinary = require("cloudinary");
 const multer = require("multer");
+
+require("dotenv").config();
 
 const { initializeDatabase } = require("./db/db.connect");
 const Post = require("./models/post.model");
@@ -23,7 +21,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({});
 
 const upload = multer({ storage });
 
@@ -50,37 +48,14 @@ app.post("/api/user/post", upload.single("media"), async (req, res) => {
         .json({ error: "Title, content, and author are required." });
     }
 
+    const file = req.file;
     let mediaUrl = null;
-    if (req.file) {
-      const mediaData = req.file.buffer;
+    if (file) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "uploads",
+      });
 
-      try {
-        let uploadFromBuffer = (req) => {
-          return new Promise((resolve, reject) => {
-            let cld_upload_stream = cloudinary.uploader.upload_stream(
-              {
-                folder: "foo",
-              },
-              (error, result) => {
-                if (result) {
-                  resolve(result);
-                } else {
-                  reject(error);
-                }
-              }
-            );
-
-            streamifier
-              .createReadStream(req.file.buffer)
-              .pipe(cld_upload_stream);
-          });
-        };
-        let result = await uploadFromBuffer(req);
-        mediaUrl = result.secure_url;
-      } catch (error) {
-        console.error("Error uploading media to cloudinary:", error);
-        return res.status(500).json({ error: "Internal server error." });
-      }
+      mediaUrl = result.secure_url;
     }
 
     const post = new Post({ title, content, media: mediaUrl, author });
@@ -107,23 +82,6 @@ app.get("/api/post/:postId", async (req, res) => {
   }
 });
 
-// app.post("/api/posts/edit/:postId", async (req, res) => {
-//   try {
-//     const updatedPost = await Post.findByIdAndUpdate(
-//       req.params.postId,
-//       req.body,
-//       { new: true }
-//     );
-//     if (updatedPost) {
-//       res.status(200).json(updatedPost);
-//     } else {
-//       res.status(404).json("Post not found");
-//     }
-//   } catch (error) {
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
-
 app.post(
   "/api/posts/edit/:postId",
   upload.single("media"),
@@ -137,35 +95,14 @@ app.post(
           .json({ error: "Title, content, and author are required." });
       }
 
+      let file = req.file;
       let mediaUrl = null;
-      if (req.file) {
-        try {
-          const uploadFromBuffer = (req) => {
-            return new Promise((resolve, reject) => {
-              const cld_upload_stream = cloudinary.uploader.upload_stream(
-                {
-                  folder: "foo",
-                },
-                (error, result) => {
-                  if (result) {
-                    resolve(result);
-                  } else {
-                    reject(error);
-                  }
-                }
-              );
+      if (file) {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: "uploads",
+        });
 
-              streamifier
-                .createReadStream(req.file.buffer)
-                .pipe(cld_upload_stream);
-            });
-          };
-          const result = await uploadFromBuffer(req);
-          mediaUrl = result.secure_url;
-        } catch (error) {
-          console.error("Error uploading media to cloudinary:", error);
-          return res.status(500).json({ error: "Internal server error." });
-        }
+        mediaUrl = result.secure_url;
       }
 
       const updateData = { title, content, author };
