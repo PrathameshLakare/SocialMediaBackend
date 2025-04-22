@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cloudinary = require("cloudinary");
 const multer = require("multer");
+const jwt = require("jsonwebtoken");
 
 require("dotenv").config();
 
@@ -14,6 +15,23 @@ app.use(cors());
 
 app.use(express.json());
 initializeDatabase();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const verifyJWT = (req, res, next) => {
+  const token = req.cookies["access_token"];
+
+  if (!token) {
+    return res.status(401).json({ message: "Token is not provided." });
+  }
+
+  try {
+    const decodedToken = jwt.verify(token, JWT_SECRET);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid token." });
+  }
+};
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
