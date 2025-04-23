@@ -65,36 +65,41 @@ app.get("/api/post", async (req, res) => {
   }
 });
 
-app.post("/api/user/post", upload.single("media"), async (req, res) => {
-  try {
-    const { title, content, author } = req.body;
+app.post(
+  "/api/user/post",
+  verifyJWT,
+  upload.single("media"),
+  async (req, res) => {
+    try {
+      const { title, content, author } = req.body;
 
-    if (!title || !content || !author) {
-      return res
-        .status(400)
-        .json({ error: "Title, content, and author are required." });
+      if (!title || !content || !author) {
+        return res
+          .status(400)
+          .json({ error: "Title, content, and author are required." });
+      }
+
+      const file = req.file;
+      let mediaUrl = null;
+      if (file) {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: "uploads",
+        });
+
+        mediaUrl = result.secure_url;
+      }
+
+      const post = new Post({ title, content, media: mediaUrl, author });
+      const savedPost = await post.save();
+      res
+        .status(201)
+        .json({ message: "Post saved successfully.", post: savedPost });
+    } catch (error) {
+      console.error("Error creating post:", error);
+      res.status(500).json({ error: "Internal server error." });
     }
-
-    const file = req.file;
-    let mediaUrl = null;
-    if (file) {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: "uploads",
-      });
-
-      mediaUrl = result.secure_url;
-    }
-
-    const post = new Post({ title, content, media: mediaUrl, author });
-    const savedPost = await post.save();
-    res
-      .status(201)
-      .json({ message: "Post saved successfully.", post: savedPost });
-  } catch (error) {
-    console.error("Error creating post:", error);
-    res.status(500).json({ error: "Internal server error." });
   }
-});
+);
 
 app.get("/api/post/:postId", async (req, res) => {
   try {
@@ -111,6 +116,7 @@ app.get("/api/post/:postId", async (req, res) => {
 
 app.post(
   "/api/posts/edit/:postId",
+  verifyJWT,
   upload.single("media"),
   async (req, res) => {
     try {
@@ -157,7 +163,7 @@ app.post(
   }
 );
 
-app.post("/api/posts/like/:postId", async (req, res) => {
+app.post("/api/posts/like/:postId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     const post = await Post.findById(req.params.postId);
@@ -179,7 +185,7 @@ app.post("/api/posts/like/:postId", async (req, res) => {
   }
 });
 
-app.post("/api/posts/dislike/:postId", async (req, res) => {
+app.post("/api/posts/dislike/:postId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     const post = await Post.findById(req.params.postId);
@@ -203,7 +209,7 @@ app.post("/api/posts/dislike/:postId", async (req, res) => {
   }
 });
 
-app.delete("/api/user/posts/:postId", async (req, res) => {
+app.delete("/api/user/posts/:postId", verifyJWT, async (req, res) => {
   try {
     const deletedPost = await Post.findByIdAndDelete(req.params.postId);
 
@@ -300,7 +306,7 @@ app.get("/api/user", async (req, res) => {
   }
 });
 
-app.post("/api/user/update/:userId", async (req, res) => {
+app.post("/api/user/update/:userId", verifyJWT, async (req, res) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(
       req.params.userId,
@@ -319,9 +325,10 @@ app.post("/api/user/update/:userId", async (req, res) => {
   }
 });
 
-app.post("/api/users/bookmark/:postId", async (req, res) => {
+app.post("/api/users/bookmark/:postId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
 
     if (user) {
       user.bookmarks.push(req.params.postId);
@@ -337,9 +344,11 @@ app.post("/api/users/bookmark/:postId", async (req, res) => {
   }
 });
 
-app.get("/api/users/bookmark/:userId", async (req, res) => {
+app.get("/api/users/bookmark", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
+    const userId = req.user.id;
+    console.log(userId);
+    const user = await User.findById(userId);
     if (user) {
       res.json(user.bookmarks);
     } else {
@@ -350,7 +359,7 @@ app.get("/api/users/bookmark/:userId", async (req, res) => {
   }
 });
 
-app.post("/api/users/add-bookmark/:postId", async (req, res) => {
+app.post("/api/users/add-bookmark/:postId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     if (user && !user.bookmarks.includes(req.params.postId)) {
@@ -365,7 +374,7 @@ app.post("/api/users/add-bookmark/:postId", async (req, res) => {
   }
 });
 
-app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
+app.post("/api/users/remove-bookmark/:postId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     if (user) {
@@ -382,7 +391,7 @@ app.post("/api/users/remove-bookmark/:postId", async (req, res) => {
   }
 });
 
-app.post("/api/users/follow/:followUserId", async (req, res) => {
+app.post("/api/users/follow/:followUserId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     const followUser = await User.findById(req.params.followUserId);
@@ -398,7 +407,7 @@ app.post("/api/users/follow/:followUserId", async (req, res) => {
   }
 });
 
-app.post("/api/users/unfollow/:followUserId", async (req, res) => {
+app.post("/api/users/unfollow/:followUserId", verifyJWT, async (req, res) => {
   try {
     const user = await User.findById(req.body.userId);
     const followUser = await User.findById(req.params.followUserId);
