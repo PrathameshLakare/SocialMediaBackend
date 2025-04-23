@@ -75,13 +75,12 @@ app.post(
   verifyJWT,
   upload.single("media"),
   async (req, res) => {
+    const userId = req.user.id;
     try {
-      const { title, content, author } = req.body;
+      const { title, content } = req.body;
 
-      if (!title || !content || !author) {
-        return res
-          .status(400)
-          .json({ error: "Title, content, and author are required." });
+      if (!title || !content) {
+        return res.status(400).json({ error: "Title, content, are required." });
       }
 
       const file = req.file;
@@ -94,7 +93,12 @@ app.post(
         mediaUrl = result.secure_url;
       }
 
-      const post = new Post({ title, content, media: mediaUrl, author });
+      const post = new Post({
+        title,
+        content,
+        media: mediaUrl,
+        author: userId,
+      });
       const savedPost = await post.save();
       res
         .status(201)
@@ -124,13 +128,12 @@ app.post(
   verifyJWT,
   upload.single("media"),
   async (req, res) => {
+    const userId = req.user.id;
     try {
-      const { title, content, author } = req.body;
+      const { title, content } = req.body;
 
-      if (!title || !content || !author) {
-        return res
-          .status(400)
-          .json({ error: "Title, content, and author are required." });
+      if (!title || !content) {
+        return res.status(400).json({ error: "Title, content are required." });
       }
 
       let file = req.file;
@@ -143,7 +146,7 @@ app.post(
         mediaUrl = result.secure_url;
       }
 
-      const updateData = { title, content, author };
+      const updateData = { title, content, author: userId };
       if (mediaUrl) {
         updateData.media = mediaUrl;
       }
@@ -170,7 +173,8 @@ app.post(
 
 app.post("/api/posts/like/:postId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     const post = await Post.findById(req.params.postId);
 
     if (!post || !user) {
@@ -192,7 +196,8 @@ app.post("/api/posts/like/:postId", verifyJWT, async (req, res) => {
 
 app.post("/api/posts/dislike/:postId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     const post = await Post.findById(req.params.postId);
 
     if (!post || !user) {
@@ -311,15 +316,12 @@ app.get("/api/user", async (req, res) => {
   }
 });
 
-app.post("/api/user/update/:userId", verifyJWT, async (req, res) => {
+app.post("/api/user/update", verifyJWT, async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.userId,
-      req.body,
-      {
-        new: true,
-      }
-    );
+    const userId = req.user.id;
+    const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
+      new: true,
+    });
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found." });
     } else {
@@ -366,7 +368,8 @@ app.get("/api/users/bookmark", verifyJWT, async (req, res) => {
 
 app.post("/api/users/add-bookmark/:postId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     if (user && !user.bookmarks.includes(req.params.postId)) {
       user.bookmarks.push(req.params.postId);
       await user.save();
@@ -381,7 +384,8 @@ app.post("/api/users/add-bookmark/:postId", verifyJWT, async (req, res) => {
 
 app.post("/api/users/remove-bookmark/:postId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     if (user) {
       user.bookmarks = user.bookmarks.filter(
         (postId) => postId.toString() !== req.params.postId
@@ -398,7 +402,8 @@ app.post("/api/users/remove-bookmark/:postId", verifyJWT, async (req, res) => {
 
 app.post("/api/users/follow/:followUserId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     const followUser = await User.findById(req.params.followUserId);
     if (user && followUser) {
       user.following.push(followUser._id);
@@ -414,7 +419,8 @@ app.post("/api/users/follow/:followUserId", verifyJWT, async (req, res) => {
 
 app.post("/api/users/unfollow/:followUserId", verifyJWT, async (req, res) => {
   try {
-    const user = await User.findById(req.body.userId);
+    const userId = req.user.id;
+    const user = await User.findById(userId);
     const followUser = await User.findById(req.params.followUserId);
     if (user && followUser) {
       user.following = user.following.filter(
