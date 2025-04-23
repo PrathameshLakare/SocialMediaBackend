@@ -234,6 +234,19 @@ app.delete("/api/user/posts/:postId", verifyJWT, async (req, res) => {
 });
 
 //User api
+
+app.get("/api/user/me", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select("-password");
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (error) {}
+});
+
 app.post("/api/user", async (req, res) => {
   try {
     const { username, email, password } = req.body;
