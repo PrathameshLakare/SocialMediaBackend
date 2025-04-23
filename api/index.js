@@ -4,6 +4,7 @@ const cloudinary = require("cloudinary");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
 
 require("dotenv").config();
 
@@ -22,6 +23,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 initializeDatabase();
 
 const JWT_SECRET = process.env.JWT_SECRET;
