@@ -16,7 +16,8 @@ const cors = require("cors");
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin:
+      "https://social-media-backend-git-main-prathamesh-lakares-projects.vercel.app",
     credentials: true,
   })
 );
