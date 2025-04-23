@@ -3,20 +3,29 @@ const app = express();
 const cloudinary = require("cloudinary");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 require("dotenv").config();
 
 const { initializeDatabase } = require("./db/db.connect");
+const { setSecureCookie } = require("./services/index.js");
 const Post = require("./models/post.model");
 const User = require("./models/user.model");
 
 const cors = require("cors");
-app.use(cors());
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 initializeDatabase();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
 const verifyJWT = (req, res, next) => {
   const token = req.cookies["access_token"];
 
@@ -208,17 +217,73 @@ app.delete("/api/user/posts/:postId", async (req, res) => {
   }
 });
 
+//User api
 app.post("/api/user", async (req, res) => {
   try {
-    const user = new User(req.body);
-    const savedUser = await user.save();
-    if (savedUser) {
-      res
-        .status(201)
-        .json({ message: "User saved successfully.", user: savedUser });
+    const { username, email, password } = req.body;
+    const existedUser = await User.findOne({ email });
+
+    if (existedUser) {
+      res.status(400).json({ message: "User already exists." });
+    } else {
+      //hash the password
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      const user = new User({
+        username,
+        email,
+        password: hashedPassword,
+        avatar:
+          "https://img.freepik.com/free-psd/3d-rendering-avatar_23-2150833554.jpg?size=626&ext=jpg&ga=GA1.1.1278706250.1727432548&semt=ais_hybrid",
+      });
+
+      const savedUser = await user.save();
+      if (savedUser) {
+        const jwtToken = jwt.sign(
+          { id: savedUser._id, user: savedUser, role: "user" },
+          JWT_SECRET,
+          { expiresIn: "24h" }
+        );
+        setSecureCookie(res, jwtToken);
+        res.status(201).json({
+          message: "User registered successfully",
+          token: jwtToken,
+          userId: savedUser._id,
+        });
+      }
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json("Internal server error.");
+  }
+});
+
+app.post("/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ id: user._id, role: "user" }, JWT_SECRET, {
+      expiresIn: "24h",
+    });
+    setSecureCookie(res, token);
+
+    res
+      .status(200)
+      .json({ message: "User login successful.", token, userId: user._id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error." });
   }
 });
 
