@@ -17,7 +17,10 @@ const cors = require("cors");
 
 app.use(
   cors({
-    origin: "https://social-media-application-taupe.vercel.app",
+    origin: [
+      "http://localhost:3000",
+      "https://social-media-application-taupe.vercel.app",
+    ],
     credentials: true,
   })
 );
