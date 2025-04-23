@@ -16,8 +16,7 @@ const cors = require("cors");
 
 app.use(
   cors({
-    origin:
-      "https://social-media-backend-git-main-prathamesh-lakares-projects.vercel.app",
+    origin: "https://social-media-application-taupe.vercel.app",
     credentials: true,
   })
 );
