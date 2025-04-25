@@ -249,6 +249,7 @@ app.get("/api/user/me", verifyJWT, async (req, res) => {
   }
 });
 
+//register
 app.post("/api/user", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -277,9 +278,13 @@ app.post("/api/user", async (req, res) => {
           { expiresIn: "24h" }
         );
         setSecureCookie(res, jwtToken);
+
+        const userWithoutPassword = savedUser.toObject();
+        delete userWithoutPassword.password;
+
         res.status(201).json({
           message: "User registered successfully",
-          user: savedUser,
+          user: userWithoutPassword,
         });
       }
     }
@@ -289,6 +294,7 @@ app.post("/api/user", async (req, res) => {
   }
 });
 
+//login
 app.post("/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -308,13 +314,27 @@ app.post("/auth/login", async (req, res) => {
     });
     setSecureCookie(res, token);
 
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.password;
+
     res
       .status(200)
-      .json({ message: "User login successful.", token, user: user });
+      .json({ message: "User login successful.", user: userWithoutPassword });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error." });
   }
+});
+
+//logout
+app.post("api/logout", (req, res) => {
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+  });
+
+  res.status(200).json({ message: "User logged out successfully." });
 });
 
 app.get("/api/user", async (req, res) => {
