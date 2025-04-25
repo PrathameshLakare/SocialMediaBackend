@@ -327,7 +327,7 @@ app.post("/auth/login", async (req, res) => {
 });
 
 //logout
-app.post("api/logout", (req, res) => {
+app.post("/api/logout", (req, res) => {
   res.clearCookie("access_token", {
     httpOnly: true,
     secure: true,
